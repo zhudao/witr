@@ -11,7 +11,7 @@ body:
     id: description
     attributes:
       label: Describe the bug
-      description: A clear and concise description of what the bug is.
+      description: A clear and concise description of what the bug is, and what you expected instead.
       placeholder: I was doing X and Y happened...
     validations:
       required: true
@@ -19,15 +19,15 @@ body:
     id: reproduce
     attributes:
       label: To Reproduce
-      description: Steps to reproduce the behavior.
+      description: The witr command you ran and its output (with `--no-color`; `--json` output helps too). Say whether you ran it with sudo or as Administrator, and whether it ran inside WSL, a container or a VM.
       placeholder: |
-        1. Run '...'
+        1. Run `witr --port 8080`
         2. See error
   - type: input
     id: os
     attributes:
       label: OS
-      description: e.g. macOS, Ubuntu
+      description: e.g. macOS, Ubuntu, Windows (mention WSL if you use it)
       placeholder: macOS 14.0
     validations:
       required: true
@@ -35,8 +35,8 @@ body:
     id: version
     attributes:
       label: Version
-      description: e.g. v0.1.0
-      placeholder: v0.1.0
+      description: The output of `witr --version`
+      placeholder: witr vX.Y.Z (commit ..., built ...)
   - type: input
     id: arch
     attributes:

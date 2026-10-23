@@ -12,6 +12,7 @@ All types of contributions are encouraged and valued. See the [Table of Contents
 
 ## Table of Contents
 
+- [Building from source](#building-from-source)
 - [Code of Conduct](#code-of-conduct)
 - [I Have a Question](#i-have-a-question)
 - [I Want To Contribute](#i-want-to-contribute)
@@ -20,6 +21,7 @@ All types of contributions are encouraged and valued. See the [Table of Contents
   - [Improving Documentation](#improving-documentation)
 - [Styleguides](#styleguides)
   - [Commit Messages](#commit-messages)
+- [License](#license)
 
 ## Building from source
 
@@ -48,7 +50,7 @@ Before you ask a question, it is best to search for existing [Issues](https://gi
 
 If you then still feel the need to ask a question and need clarification, we recommend the following:
 
-- Open an [Issue](https://github.com/pranshuparmar/witr/issues/new).
+- Start a [Discussion](https://github.com/pranshuparmar/witr/discussions).
 - Provide as much context as you can about what you're running into.
 - Provide project and platform versions (witr version, OS, Shell, target service (if possible) etc.), depending on what seems relevant.
 
@@ -68,7 +70,7 @@ This section guides you through submitting an enhancement suggestion for **witr*
 - Make sure that you are using the latest version.
 - Read the [documentation](README.md) carefully and find out if the functionality is already covered, maybe by an individual configuration.
 - Search [Issues](https://github.com/pranshuparmar/witr/issues) to see if the enhancement has already been suggested. If it has, add a comment to the existing issue instead of opening a new one.
-- Find out whether your idea fits with the scope and aims of the project. It's up to you to make a strong case to convince the project's developers of the merits of this feature. Keep in mind that we want features that will be useful to the majority of our users and not just a small subset. If you're just targeting a edge case, might be better to create a separate extension/library.
+- Find out whether your idea fits with the scope and aims of the project. It's up to you to make a strong case to convince the project's developers of the merits of this feature. Keep in mind that we want features that will be useful to the majority of our users and not just a small subset. If you're just targeting an edge case, might be better to create a separate extension/library.
 
 #### How Do I Submit a Good Enhancement Suggestion?
 
@@ -87,7 +89,8 @@ Enhancement suggestions are tracked as [GitHub issues](https://github.com/pransh
 1. Fork the repository.
 2. Clone your fork: `git clone https://github.com/YOUR_USERNAME/witr.git`
 3. Create a feature branch: `git checkout -b feature/your-feature-name`
-4. Install dependencies: `go mod download`
+
+Dependencies are vendored in `vendor/`, so there is nothing to download.
 
 #### Development
 
@@ -95,18 +98,22 @@ Enhancement suggestions are tracked as [GitHub issues](https://github.com/pransh
 - Use `gofmt` to format your code.
 - Write unit tests for new functionality.
 - Ensure all tests pass: `go test ./...`
+- Fixing or adding something in a platform file (`_linux.go`)? Check its `_darwin.go`, `_freebsd.go` and `_windows.go` counterparts for the same gap. Each platform reads processes differently, but features should match.
+- Many features exist twice: once for the CLI (`internal/target`, `internal/output`) and once for the TUI (`internal/tui`, `internal/proc`). Update both.
+- Don't add symlinks: Git for Windows checks them out as plain text files, and CI rejects them.
+- Changing flags, JSON fields or exit codes? Update the README and the agent skill (`plugins/witr/skills/witr/SKILL.md`) too.
+- A version bump edits three files: `internal/version/VERSION`, the root `VERSION` and the plugin's `version` in `plugins/witr/.claude-plugin/plugin.json`. Tests fail until they match.
 - Changing what witr prints (`internal/output`)? Mirror it in the playground engine (`docs/js/engine.js`), regenerate its fixtures with `go run -tags fixtures ./docs/fixtures/gen` and check them with `node docs/scripts/check-fixtures.mjs`; CI does the same.
 - Adding a `--json` field? Record it with `go test ./internal/app -run TestJSONContract -update` and commit the updated golden file. Renaming, removing or retyping a field breaks the JSON contract.
 - Changing dependencies? Run `go mod tidy && go mod vendor`; CI checks that `vendor/` is in sync.
 
 #### Pull Request Process
 
-1. **Squash your commits**: We prefer a clean history. Please squash your commits into a single logical commit before submitting.
-2. **Rebase on `staging`**: Ensure your branch is up to date with the `staging` branch.
-3. **Open a PR**: Open a PR against the `staging` branch, not `main`.
-4. **Use the Template**: Fill out the PR template completely.
-5. **Review**: Wait for a maintainer to review your PR. Address any feedback promptly.
-6. **Merge**: Once approved, a maintainer will merge your PR. We **strictly use Squash and Merge** to keep the `main` history clean.
+1. **Rebase on `staging`**: Ensure your branch is up to date with the `staging` branch.
+2. **Open a PR**: Open a PR against the `staging` branch, not `main`. Its title must follow [Conventional Commits](#commit-messages) (CI checks it), since it becomes the commit message.
+3. **Use the Template**: Fill out the PR template completely.
+4. **Review**: Wait for a maintainer to review your PR. Address any feedback promptly.
+5. **Merge**: Once approved, a maintainer will merge your PR. We **strictly use Squash and Merge**, so your branch's commits don't need squashing first.
 
 #### Validating the PR Check Locally
 
@@ -115,23 +122,24 @@ You can validate the PR check workflow before pushing, either by running the com
 **Option 1: Manual validation (fastest)**
 
 ```bash
-# Check formatting
-test -z $(gofmt -l .)
+# Formatting (vendor/ excluded, as in CI) and go vet
+make lint
 
-# Run static analysis
-go vet ./...
+# Tests
+make test
 
-# Run tests
-go test -v ./...
+# golangci-lint, once per platform as CI does (CI uses v2.12.2)
+for t in linux/amd64 linux/loong64 darwin/amd64 windows/amd64 freebsd/amd64; do
+  GOOS=${t%/*} GOARCH=${t#*/} golangci-lint run ./...
+done
 
-# Verify cross-compilation
-GOOS=linux  GOARCH=amd64 go build -v ./cmd/witr
-GOOS=linux  GOARCH=arm64 go build -v ./cmd/witr
-GOOS=linux  GOARCH=loong64 go build -v ./cmd/witr
-GOOS=darwin GOARCH=amd64 go build -v ./cmd/witr
-GOOS=darwin GOARCH=arm64 go build -v ./cmd/witr
-GOOS=freebsd GOARCH=amd64 go build -v ./cmd/witr
-GOOS=windows GOARCH=amd64 go build -v ./cmd/witr
+# Known vulnerabilities
+go run golang.org/x/vuln/cmd/govulncheck@v1.7.0 ./...
+
+# Every release target still builds
+for t in linux/amd64 linux/arm64 linux/loong64 darwin/amd64 darwin/arm64 freebsd/amd64 freebsd/arm64 windows/amd64 windows/arm64; do
+  CGO_ENABLED=0 GOOS=${t%/*} GOARCH=${t#*/} go build -o /dev/null ./cmd/witr
+done
 ```
 
 **Option 2: Using `act` (Docker required)**

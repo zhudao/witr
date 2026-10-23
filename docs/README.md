@@ -8,7 +8,7 @@ Nothing here touches the visitor's machine. Every process, port, container, and
 lock is authored data; the terminal simulates witr, not a real shell.
 
 **Live:** this folder *is* the site — GitHub Pages serves it directly (see
-[Deployment](#deployment)) at `https://<owner>.github.io/witr/`.
+[Deployment](#deployment)) at <https://pranshuparmar.github.io/witr/>.
 
 > This directory also holds `cli/` — the generated `witr` man page and markdown
 > reference (produced by `make docs`). That's unrelated to the playground; it
@@ -92,13 +92,14 @@ docs/
   worlds/               the simulated machines (single source of truth)
     webbox.json         production box (tutorial)
     devbox.json         dev laptop (sandbox)
-  fixtures/             golden output from the real witr binary
+  fixtures/             golden output from witr's real output package
     gen/main.go         generator (build-tagged: `-tags fixtures`)
   scripts/
     check-fixtures.mjs  engine ⇄ golden fixture diff
   vendor/
     three.module.min.js three.js r160 (vendored, MIT)
   cli/                  generated witr man page + markdown (from `make docs`)
+  llms.txt              copy of the root llms.txt, made on push to main by update-docs.yml (edit the root one)
   .nojekyll             serve files as-is (no Jekyll processing)
 ```
 

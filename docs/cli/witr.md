@@ -4,7 +4,7 @@ Why is this running?
 
 ### Synopsis
 
-witr explains why a process or port is running by tracing its ancestry.
+witr explains why a process is running, found by name, PID, port, container or open file, by tracing what started it and what keeps it running.
 
 ```
 witr [process name...] [flags]
@@ -15,7 +15,7 @@ witr [process name...] [flags]
 ```
 
   # Inspect a running process by name
-  witr nginx
+  witr redis-server
 
   # Look up a process by PID
   witr --pid 1234
@@ -33,36 +33,36 @@ witr [process name...] [flags]
   witr bun --exact
 
   # Show the full process ancestry (who started whom)
-  witr postgres --tree
+  witr mysqld --tree
 
-  # Show only warnings (suspicious env, arguments, parents)
-  witr docker --warnings
+  # Show only warnings (running as root, public bind, restarts, ...)
+  witr dockerd --warnings
 
   # Display only environment variables of the process
-  witr node --env
+  witr --pid 1234 --env
 
   # Short, single-line output (useful for scripts)
-  witr sshd --short
+  witr --port 22 --short
 
   # Disable colorized output (CI or piping)
-  witr redis --no-color
+  witr --port 5432 --no-color
 
   # Output machine-readable JSON
-  witr chrome --json
+  witr --port 3000 --json
 
   # Show extended process information (memory, I/O, file descriptors)
-  witr mysql --verbose
+  witr mysqld --verbose
 
   # Combine flags: inspect port, show environment variables, output JSON
   witr --port 8080 --env --json
 
   # Multiple inputs
-  witr nginx node
+  witr mysqld redis-server
   witr --port 8080 --port 3000
   witr --pid 1234 --pid 5678
 
   # Mixed inputs
-  witr nginx --pid 1234 --port 8080
+  witr redis-server --pid 1234 --port 8080
 
 ```
 
@@ -82,6 +82,21 @@ witr [process name...] [flags]
   -s, --short               show only ancestry
   -t, --tree                show only ancestry as a tree
       --verbose             show extended process information
+  -v, --version             version for witr
       --warnings            show only warnings
 ```
 
+
+### Exit codes
+
+| Code | Meaning |
+|------|---------|
+| 0 | Clean: process found, no warnings |
+| 1 | Warnings: process found but has one or more warnings |
+| 2 | Not found: no matching process or service |
+| 3 | Permission denied: insufficient privileges (retry with sudo) |
+| 4 | Invalid input: bad arguments or ambiguous match |
+| 5 | Internal error: an unexpected failure occurred |
+| 6 | Cause unknown: process found, but what started it can't be traced (not used on Windows) |
+
+With several targets, the most severe result wins. Cause unknown ranks above warnings but below every failure (2 to 5).

@@ -19,7 +19,7 @@ import (
 
 var updateContract = flag.Bool("update", false, "rewrite testdata/json_contract.golden")
 
-// --json is a contract (README, "7.4 JSON Output"): field names and types stay
+// --json is a contract (README, "7.3 JSON Output"): field names and types stay
 // stable, and releases only add fields. This pins every field of every JSON
 // shape witr prints, built from fully populated values, so a rename, removal
 // or type change fails here. After deliberately adding a field, run

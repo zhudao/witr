@@ -30,11 +30,7 @@ Use the "Report a vulnerability" button in the repository’s [Security](https:/
 
 ## Our Response Process
 
-1. **Acknowledgment**: We will acknowledge receipt of your report within 48 hours.
+1. **Acknowledgment**: We will acknowledge receipt of your report as soon as we can.
 2. **Investigation**: We will investigate the report and determine the severity and impact.
 3. **Fix**: If a vulnerability is confirmed, we will work on a fix and release a new version as soon as possible.
 4. **Disclosure**: We will coordinate the disclosure of the vulnerability with you to ensure that users have time to update.
-
-## Attribution
-
-This security policy is based on standard open-source practices.

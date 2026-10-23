@@ -44,13 +44,13 @@ Check the exit code first:
 | 1 | Found, with warnings. Not a failure | Report it and mention the warnings that matter |
 | 2 | Not found | Nothing on this system runs or listens there; say so. For a port, `Error` may say something outside this system (another WSL distro, a VM) holds it |
 | 3 | Permission denied | It belongs to another user; suggest re-running with `sudo`, and ask first |
-| 4 | Ambiguous or bad input | `Matches` lists the candidates: re-run with `--pid` for the right one, or fix the input |
+| 4 | Ambiguous or bad input | `Matches` lists the candidates: re-run with `--pid` for the right one, or fix the input. Servers with same-named workers (nginx, postgres) list every worker; the one you want is usually the parent |
 | 5 | Internal error | Report the `Error` |
 | 6 | Found, but what started it can't be traced (Linux, macOS, FreeBSD) | The process that started it has exited; say so |
 
 With several targets, the most severe result wins.
 
-Then the JSON (the full contract is in the README, section "7.4 JSON Output"):
+Then the JSON (the full contract is in the README, section "7.3 JSON Output"):
 
 - **Found:** `Process` (`PID`, `Command`, `Cmdline`, `User`, `StartedAt`, `WorkingDir`, `Sockets`, ...), `Ancestry` (the chain from the top down to the process), `Source` (`Type`: `systemd`, `launchd`, `bsdrc`, `container`, `shell`, `ssh`, `cron`, `supervisor`, `windows_service`, `init` or `unknown`; `Name`; `Description`), `Warnings`, and `Container` when it runs in one.
 - **Failed lookup:** `{Target, Error}`, plus `Matches` when the target was ambiguous.
@@ -74,8 +74,13 @@ When they agree, stop it through whatever manages it, or it will come straight b
 | systemd | `systemctl stop <unit>` (`--user` for a user unit) |
 | launchd | `launchctl bootout gui/$(id -u)/<label>` (`sudo launchctl bootout system/<label>` for a daemon) |
 | FreeBSD rc (`bsdrc`) | `service <name> stop` |
-| Docker / Podman | `docker stop <name>` / `podman stop <name>` |
+| Docker / Podman / nerdctl | `docker stop <name>` / `podman stop <name>` / `nerdctl stop <name>` |
+| Kubernetes (`Source.Name` is `kubernetes`) | Deleting the pod only gets it rescheduled: scale down or remove what owns it, e.g. `kubectl scale deployment <name> --replicas=0` |
+| Incus / LXD / LXC | `incus stop <name>` / `lxc stop <name>` / `lxc-stop -n <name>` |
 | PM2 | `pm2 stop <name>` |
 | supervisor | `supervisorctl stop <name>` |
+| cron | `kill <pid>` stops this run only; the job runs again on schedule until its crontab entry is removed |
 | Windows service | `Stop-Service <name>` |
 | A shell or nothing traceable | `kill <pid>` (`Stop-Process -Id <pid>` on Windows) |
+
+Check `Ancestry` as well: when PM2 or supervisord sits between a systemd unit and the process (for example `systemd → PM2 → node`, with `Source` the `pm2-<user>.service` unit), stop the one app through PM2 or supervisor. Stopping the unit stops every app it runs.

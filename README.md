@@ -4,7 +4,7 @@
 
 ### Why is this running?
 Trace any process, port, container, or file back to the exact chain that started it —<br>
-one command, machine-readable JSON, or an [interactive TUI](#3-interactive-mode-tui).
+one command, machine-readable JSON, or an [interactive TUI](#4-interactive-mode-tui).
 
 [![Latest Release](https://img.shields.io/github/v/release/pranshuparmar/witr?label=Latest%20Release&style=flat-square)](https://github.com/pranshuparmar/witr/releases/latest) [![Platforms](https://img.shields.io/badge/platforms-linux%20%7C%20macos%20%7C%20windows%20%7C%20freebsd-blue?style=flat-square)](#8-platform-support) <br> [![Package Managers](https://img.shields.io/badge/Package%20Managers-brew%20|%20conda%20|%20aur%20|%20winget%20|%20npm%20|%20ports%20|%20...%20-blue?style=flat-square)](https://repology.org/project/witr/versions)
 
@@ -22,9 +22,9 @@ one command, machine-readable JSON, or an [interactive TUI](#3-interactive-mode-
 
 <div align="center">
 
-[**Purpose**](#1-purpose) • [**Installation**](#2-installation) • [**TUI**](#3-interactive-mode-tui) • [**Flags**](#4-flags--options) • [**Core Concept**](#5-core-concept) • [**Examples**](#6-example-outputs)
+[**Purpose**](#1-purpose) • [**Installation**](#2-installation) • [**AI Agents**](#3-using-witr-with-ai-coding-agents) • [**TUI**](#4-interactive-mode-tui) • [**Examples**](#5-example-outputs)
 <br>
-[**Output Behavior**](#7-output-behavior) • [**Platforms**](#8-platform-support) • [**Success Criteria**](#9-success-criteria) • [**Sponsors**](#10-sponsors)
+[**Flags**](#6-flags--options) • [**Output Behavior**](#7-output-behavior) • [**Platforms**](#8-platform-support) • [**Sponsors**](#9-sponsors)
 
 </div>
 
@@ -40,11 +40,25 @@ When something is running on a system, whether it is a process, a service, or so
 
 Existing tools (`ps`, `top`, `lsof`, `ss`, `systemctl`, `docker ps`) expose state and metadata. They show _what_ is running, but leave the user to infer _why_ by manually correlating outputs across tools.
 
-**witr** makes that causality explicit.
+**witr** makes that causality explicit. Ports, services, containers and files all map back to a **PID**, and for that PID witr answers:
 
-It explains **where a running thing came from**, **how it was started**, and **what chain of systems is responsible for it existing right now**, in a single, human-readable output or an **interactive TUI dashboard**.
+1. What is running?
+2. How did it start?
+3. What is keeping it running?
+4. What context does it belong to?
 
-> 📖 Curious how witr came to be? [Read the story](https://medium.com/@pranshu.parmar/witr-why-is-this-running-a9a97cbedd18) or browse the [Hacker News discussion](https://news.ycombinator.com/item?id=46392910).
+The answer comes as a single human-readable report, as JSON for scripts and AI agents, or in an **interactive TUI dashboard**.
+
+```bash
+witr node                 # why is this node process running?
+witr --port 8080          # what is holding port 8080, and why?
+witr --pid 1234 --tree    # its ancestry and children as a tree
+witr --container redis    # a container, across Docker, Podman, Kubernetes and more
+witr --port 8080 --json   # the same answer for scripts and AI agents
+witr                      # browse everything in the interactive TUI
+```
+
+> 📖 Curious how witr came to be? [Read the story](https://medium.com/@pranshu.parmar/witr-why-is-this-running-a9a97cbedd18).
 
 ---
 
@@ -76,7 +90,12 @@ The script will:
 - Download the latest released binary and man page
 - Install it to `/usr/local/bin/witr`
 - Install the man page to `/usr/local/share/man/man1/witr.1`
-- Pass INSTALL_PREFIX to override default install path
+
+To install somewhere else, such as `~/.local` (no sudo needed), set `INSTALL_PREFIX` on `bash`:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/pranshuparmar/witr/main/install.sh | INSTALL_PREFIX="$HOME/.local" bash
+```
 
 </details>
 
@@ -289,7 +308,7 @@ aqua i pranshuparmar/witr
 </details>
 
 <details>
-<summary><strong>Brioche (Linux)</strong> <a href="https://github.com/brioche-dev/brioche-packages/tree/main/packages/witr"><img src="https://img.shields.io/static/v1?label=brioche&message=v0.3.3&color=blue&style=flat-square" alt="Brioche"></a></summary>
+<summary><strong>Brioche (Linux)</strong> <a href="https://github.com/brioche-dev/brioche-packages/tree/main/packages/witr"><img src="https://img.shields.io/badge/dynamic/regex?url=https%3A%2F%2Fraw.githubusercontent.com%2Fbrioche-dev%2Fbrioche-packages%2Fmain%2Fpackages%2Fwitr%2Fproject.bri&search=version%3A%20%22(%5B%5E%22%5D%2B)%22&replace=v%241&label=brioche&color=blue&style=flat-square" alt="Brioche"></a></summary>
 <br>
 
 You can install **witr** using [brioche](https://brioche.dev/):
@@ -398,8 +417,7 @@ if ($env:PROCESSOR_ARCHITECTURE -eq "AMD64") {
 } elseif ($env:PROCESSOR_ARCHITECTURE -eq "ARM64") {
     $ZipName = "witr-windows-arm64.zip"
 } else {
-    Write-Error "Unsupported architecture: $($env:PROCESSOR_ARCHITECTURE)"
-    exit 1
+    throw "Unsupported architecture: $($env:PROCESSOR_ARCHITECTURE)"
 }
 
 # 2. Download the zip
@@ -524,12 +542,50 @@ sudo rm -f /usr/local/share/man/man1/witr.1
 
 ```powershell
 Remove-Item -Recurse -Force "$env:LocalAppData\witr"
+
+# Remove the install directory from your User PATH
+$InstallDir = "$env:LocalAppData\witr\bin"
+$UserPath = [Environment]::GetEnvironmentVariable("Path", "User")
+[Environment]::SetEnvironmentVariable("Path", (($UserPath -split ';') | Where-Object { $_ -and $_ -ne $InstallDir }) -join ';', "User")
 ```
 </details>
 
 ---
- 
-## 3. Interactive Mode (TUI)
+
+## 3. Using witr with AI Coding Agents
+
+AI coding agents (Claude Code, Codex, Cursor and others) regularly run into ports that are already in use, leftover dev servers and confusing containers, and work around them by chaining `lsof`, `ps`, `netstat` and `docker ps`. witr answers the same questions in one command, and two things make it easy for an agent to use:
+
+- **`--json`** prints the full report (the process, its ancestry chain, the source that started it and any warnings), and a failed lookup as `{Target, Error}`. Every shape is listed in [7.3 JSON Output](#73-json-output).
+- **Exit codes** say what happened without parsing any text (see [7.1 Exit Codes](#71-exit-codes)). Exit code `1` means the process was found and has warnings; it is not a failure.
+
+Add a short note like this to your project's agent instructions (`AGENTS.md`, `CLAUDE.md` or similar):
+
+```markdown
+## Process and port debugging
+
+Use `witr` instead of chaining lsof/ps/netstat/docker commands:
+
+- Port already in use: `witr --port <PORT> --json`
+- Unknown or stuck process: `witr <name> --json`, or `witr --pid <PID> --tree`
+- Container: `witr --container <name or ID> --json`
+
+Exit codes: 0 found, 1 found with warnings (not a failure), 2 not found,
+3 permission denied (retry with sudo), 4 ambiguous name or bad input
+(re-run with --pid), 5 internal error, 6 found but what started it can't
+be traced. Run `witr --help` for all options.
+```
+
+### Official agent skill
+
+For fuller guidance, install the official skill: it tells an agent which command fits the situation, how to read the JSON and exit codes, and to ask before stopping anything witr finds. The `witr` binary still needs to be installed.
+
+- **Claude Code:** run `/plugin marketplace add pranshuparmar/witr`, then `/plugin install witr@witr`.
+- **Other agents that read Agent Skills, or a manual install:** copy [`plugins/witr/skills/witr`](plugins/witr/skills/witr) into the agent's skills folder (for Claude Code, `~/.claude/skills/`).
+
+---
+
+## 4. Interactive Mode (TUI)
 
 Running `witr` without any arguments or with the `-i` flag launches the **Interactive Mode (TUI)**. This provides a real-time, terminal-based dashboard with four tabs for exploring processes, ports, containers, and file locks. Combine `-i` with a target to open the TUI already focused on it: `witr -i -p 1234` selects that PID, `witr -i nginx` pre-fills the process filter, and `witr -i -o 5432` / `-c web` / `-f /path` open the Ports / Containers / Locks tab with the filter set.
 
@@ -537,7 +593,7 @@ Running `witr` without any arguments or with the `-i` flag launches the **Intera
 - **Processes Tab**: Live, sortable, filterable list of all running processes with a side panel showing the ancestry tree of the highlighted process.
 - **Ports Tab**: Open/listening ports with the owning processes attached in a side panel. Toggle between LISTEN-only and ALL with `a`. Enter on an owner opens it, or the container a port is published for; an owner hidden from your user shows the user it runs as (run with sudo to see the process).
 - **Containers Tab**: All running containers across Docker, Podman, nerdctl, K8s/crictl, Incus, LXC, LXD, and FreeBSD jails in one list - name, image, status, ports, command, plus a per-container detail view with mounts, networks, and compose project metadata.
-- **Locks Tab**: System-wide file locks (POSIX/FLOCK on Linux, lsof-derived on macOS/FreeBSD). Press `a` to switch into "all open files" mode, where locked entries are merged with every interesting open fd; type into `/` to search across the merged set.
+- **Locks Tab**: System-wide file locks (POSIX/FLOCK on Linux, from `lsof` on macOS and `fstat` on FreeBSD). Press `a` to switch into "all open files" mode, where locked entries are merged with every interesting open fd; type into `/` to search across the merged set.
 - **Process Details**: Deep-dive into a process to see its full ancestry tree, child processes, environment variables, working directory, sockets, file context, and more.
 - **Process Actions**: Send signals (Kill, Terminate, Pause, Resume) or Renice processes directly from the UI (Unix only). Press `a` on a process in the list or in its detail view; the confirmation names the exact process before anything is sent.
 - **Mouse Support**: Navigate, sort columns, and click rows using your mouse.
@@ -546,7 +602,285 @@ Running `witr` without any arguments or with the `-i` flag launches the **Intera
 
 ---
 
-## 4. Flags & Options
+## 5. Example Outputs
+
+> 💡 Prefer learning by doing? These examples come from the simulated box in the [interactive browser tutorial](https://pranshuparmar.github.io/witr/), where you can run them yourself — no install required.
+
+### 5.1 Name Based Query
+
+```bash
+witr node
+```
+
+```
+Target      : node
+
+Process     : node (pid 14233)
+User        : deploy
+Command     : node /srv/expense-manager/index.js
+Started     : 2 days ago (Fri 2026-10-02 10:28:38 +00:00)
+Restarts    : 3
+
+Why It Exists :
+  systemd (pid 1) → PM2 v5.3.1: God (pid 5034) → node (pid 14233)
+
+Source      : pm2-deploy.service (systemd)
+Description : PM2 process manager for user deploy (app: expense-manager)
+Unit File   : /etc/systemd/system/pm2-deploy.service
+
+Working Dir : /srv/expense-manager
+Git Repo    : expense-manager (main)
+Sockets     : 127.0.0.1:5000 (TCP | LISTENING, 2 connections)
+              127.0.0.1:51744 → 127.0.0.1:5432 (TCP | ESTABLISHED)
+```
+
+---
+
+### 5.2 Short Output
+
+```bash
+witr --port 5000 --short
+```
+
+```
+systemd (pid 1) → PM2 v5.3.1: God (pid 5034) → node (pid 14233)
+```
+
+---
+
+### 5.3 Tree Output
+
+```bash
+witr --pid 40141 --tree
+```
+
+```
+systemd (pid 1)
+  └─ sshd (pid 711)
+    └─ sshd (pid 40122)
+      └─ sshd (pid 40140)
+        └─ bash (pid 40141)
+          ├─ python3 (pid 8123)
+          └─ ngrok (pid 14290)
+```
+
+Note: _Tree view includes child processes (up to 10) and highlights the target process._
+
+---
+
+### 5.4 Multiple Matches
+
+```bash
+witr ssh
+```
+
+```
+Multiple matching processes found:
+
+[1] sshd (pid 711)
+    sshd: /usr/sbin/sshd -D [listener] 0 of 10-100 startups
+[2] ssh (pid 27311)
+    ssh -l backup 10.0.4.20 rsync --server -logDtpre.iLsfxCIvu --partial . /backups/uploads/
+[3] sshd (pid 40122)
+    sshd: deploy [priv]
+[4] sshd (pid 40140)
+    sshd: deploy@pts/0
+
+Re-run with:
+  witr --pid <pid>
+```
+
+Names match as substrings, so `ssh` also finds every `sshd`. To match only processes named exactly `ssh`, use the `--exact` flag:
+
+```bash
+witr ssh -x
+```
+
+---
+
+### 5.5 File Based Query
+
+```bash
+witr --file /var/lib/dpkg/lock
+```
+
+```
+Target      : unattended-upgr
+
+Process     : unattended-upgr (pid 33871)
+User        : root
+Command     : /usr/bin/python3 /usr/bin/unattended-upgrade --download-only
+Started     : 4 min ago (Sun 2026-10-04 10:24:38 +00:00)
+
+Why It Exists :
+  systemd (pid 1) → unattended-upgr (pid 33871)
+
+Source      : apt-daily-upgrade.service (systemd)
+Description : Daily apt upgrade and clean activities
+Unit File   : /lib/systemd/system/apt-daily-upgrade.service
+```
+
+---
+
+### 5.6 Container Based Query
+
+```bash
+witr --container api
+```
+
+```
+Target      : gunicorn
+
+Process     : gunicorn (pid 3141)
+User        : root
+Container   : docker: expense-manager-api-1 (id 7c41e0b9a2d3)
+Image       : expense-manager-api:1.4.2
+Published   : 0.0.0.0:8081->8080/tcp
+Compose File: /srv/expense-manager/docker-compose.yml
+Compose Dir : /srv/expense-manager
+Command     : /usr/local/bin/python /usr/local/bin/gunicorn app:app --bind 0.0.0.0:8080 --workers 2
+Started     : 5 days ago (Tue 2026-09-29 10:28:38 +00:00)
+Restarts    : 1 (policy: unless-stopped)
+
+Why It Exists :
+  systemd (pid 1) → containerd-shim (pid 3120) → gunicorn (pid 3141)
+
+Source      : docker (container)
+
+Working Dir : /app
+
+Warnings    :
+  • Process is running as root
+  • Container has no healthcheck configured
+```
+
+Looks up a container by name, ID, image, command, or compose project/service across every detected runtime (Docker, Podman, nerdctl, K8s/crictl, Incus, LXC, LXD, FreeBSD jails). The output includes the container's image and, for Compose services, the Compose file and project directory on the host. Pass `--verbose` to include mounts.
+
+---
+
+### 5.7 Multiple Inputs
+
+```bash
+witr node --port 5432 --pid 8123
+```
+
+```
+----- [name: node] -----
+Target      : node
+
+Process     : node (pid 14233)
+...
+
+----- [port: 5432] -----
+Target      : postgres
+
+Process     : postgres (pid 2010)
+...
+
+----- [pid: 8123] -----
+Target      : python3
+
+Process     : python3 (pid 8123)
+...
+```
+
+All target flags are repeatable and can be mixed. Results appear in the order you typed them. All output modes (`--short`, `--tree`, `--json`, `--env`, `--warnings`, `--verbose`) work with multiple inputs.
+
+---
+
+### 5.8 Warnings, Verbose and JSON
+
+Warnings close the standard report (see 5.6). `--warnings` shows only them:
+
+```bash
+witr --pid 8123 --warnings
+```
+
+```
+Process     : python3 (pid 8123)
+Command     : python3 -m http.server 8000
+Warnings    :
+  • Process is listening on a public interface
+```
+
+<details>
+<summary><strong><code>--verbose</code></strong>: adds memory, I/O, file descriptors and threads to the standard report</summary>
+<br>
+
+```bash
+witr node --verbose
+```
+
+```
+...                       (the report from 5.1)
+
+Memory:
+  Virtual  : 1.1 GB
+  Resident : 179.0 MB
+  Shared   : 40.0 MB
+
+I/O Statistics:
+  Read  : 15.0 MB (2140 ops)
+  Write : 4.0 MB (512 ops)
+
+File Descriptors: 34/1024
+
+Threads: 11
+```
+</details>
+
+<details>
+<summary><strong><code>--json</code></strong>: the same report for scripts and AI agents (trimmed)</summary>
+<br>
+
+```bash
+witr --port 5000 --json
+```
+
+```
+{
+  "Target": { "Type": "port", "Value": "5000" },
+  "ResolvedTarget": "node",
+  "Process": {
+    "PID": 14233,
+    "PPID": 5034,
+    "Command": "node",
+    "Cmdline": "node /srv/expense-manager/index.js",
+    "StartedAt": "2026-10-02T10:28:38Z",
+    "User": "deploy",
+    "WorkingDir": "/srv/expense-manager",
+    "GitRepo": "expense-manager",
+    "GitBranch": "main",
+    "Sockets": [
+      { "Port": 5000, "Address": "127.0.0.1", "State": "LISTEN", "Protocol": "TCP" },
+      ...
+    ],
+    ...
+  },
+  "RestartCount": 3,
+  "Ancestry": [
+    { "PID": 1, "Command": "systemd", ... },
+    { "PID": 5034, "Command": "PM2 v5.3.1: God", ... },
+    { "PID": 14233, "Command": "node", ... }
+  ],
+  "Source": {
+    "Type": "systemd",
+    "Name": "pm2-deploy.service",
+    "Description": "PM2 process manager for user deploy (app: expense-manager)",
+    "UnitFile": "/etc/systemd/system/pm2-deploy.service",
+    "Details": { "NRestarts": "3" }
+  },
+  "Warnings": null,
+  ...
+}
+```
+
+Every JSON shape is listed in [7.3 JSON Output](#73-json-output).
+</details>
+
+---
+
+## 6. Flags & Options
 
 ```
   -c, --container strings container(s) to look up (repeatable)
@@ -576,174 +910,9 @@ The TUI is launched if no arguments or relevant flags (`--pid`, `--port`, `--fil
 
 ---
 
-## 5. Core Concept
-
-witr treats **everything as a process question**.
-
-Ports, services, containers, and commands all eventually map to **PIDs**. Once a PID is identified, witr builds a causal chain explaining _why that PID exists_.
-
-At its core, witr answers:
-
-1. What is running?
-2. How did it start?
-3. What is keeping it running?
-4. What context does it belong to?
-
----
-
-## 6. Example Outputs
-
-> 💡 Prefer learning by doing? The [interactive browser tutorial](https://pranshuparmar.github.io/witr/) walks you through outputs like these live on a simulated box — for a better feel of witr, no install required.
-
-### 6.1 Name Based Query
-
-```bash
-witr node
-```
-
-```
-Target      : node
-
-Process     : node (pid 14233)
-User        : pm2
-Command     : node index.js
-Started     : 2 days ago (Mon 2025-02-02 11:42:10 +05:30)
-
-Why It Exists :
-  systemd (pid 1) → pm2 (pid 5034) → node (pid 14233)
-
-Source      : pm2
-
-Working Dir : /opt/apps/expense-manager
-Git Repo    : expense-manager (main)
-Sockets     : 127.0.0.1:5001 (TCP | LISTENING, 2 connections)
-              127.0.0.1:51744 → 127.0.0.1:5432 (TCP | ESTABLISHED)
-```
-
----
-
-### 6.2 Short Output
-
-```bash
-witr --port 5000 --short
-```
-
-```
-systemd (pid 1) → PM2 v5.3.1: God (pid 1481580) → python (pid 1482060)
-```
-
----
-
-### 6.3 Tree Output
-
-```bash
-witr --pid 143895 --tree
-```
-
-```
-systemd (pid 1)
-  └─ init-systemd(Ub (pid 2)
-    └─ SessionLeader (pid 143858)
-      └─ Relay(143860) (pid 143859)
-        └─ bash (pid 143860)
-          └─ sh (pid 143886)
-            └─ node (pid 143895)
-              ├─ node (pid 143930)
-              ├─ node (pid 144189)
-              └─ node (pid 144234)
-```
-
-Note: _Tree view includes child processes (up to 10) and highlights the target process._
-
----
-
-### 6.4 Multiple Matches
-
-```bash
-witr ng
-```
-
-```
-Multiple matching processes found:
-
-[1] nginx (pid 2311)
-    nginx -g daemon off;
-[2] nginx (pid 24891)
-    nginx -g daemon off;
-[3] ngrok (pid 14233)
-    ngrok http 5000
-
-Re-run with:
-  witr --pid <pid>
-```
-
-To avoid substring matching and only find processes with an exact name, use the `--exact` flag:
-
-```bash
-witr nginx -x
-```
-
----
-
-### 6.5 File Based Query
-
-```bash
-witr --file /var/lib/dpkg/lock
-```
-
-Explains the process holding a file open.
-
----
-
-### 6.6 Container Based Query
-
-```bash
-witr --container redis
-```
-
-Looks up a container by name, ID, image, command, or compose project/service across every detected runtime (Docker, Podman, nerdctl, K8s/crictl, Incus, LXC, LXD, FreeBSD jails). The output includes the container's image and, for Compose services, the Compose file and project directory on the host. Pass `--verbose` to include mounts.
-
----
-
-### 6.7 Multiple Inputs
-
-```bash
-witr nginx --port 5432 --pid 1234
-```
-
-```
------ [name: nginx] -----
-Target      : nginx
-Process     : nginx (pid 2311)
-...
-
------ [port: 5432] -----
-Target      : postgres
-Process     : postgres (pid 891)
-...
-
------ [pid: 1234] -----
-Target      : node
-Process     : node (pid 1234)
-...
-```
-
-All target flags are repeatable and can be mixed. Results appear in the order you typed them. All output modes (`--short`, `--tree`, `--json`, `--env`, `--warnings`, `--verbose`) work with multiple inputs.
-
----
-
 ## 7. Output Behavior
 
-### 7.1 Output Principles
-
-- Single screen by default (best effort)
-- Deterministic ordering
-- Narrative-style explanation
-- Best-effort detection with explicit uncertainty
-
----
-
-### 7.2 Exit Codes
+### 7.1 Exit Codes
 
 witr returns meaningful exit codes for use in scripts, CI pipelines, and monitoring:
 
@@ -776,7 +945,7 @@ esac
 
 ---
 
-### 7.3 Standard Output Sections
+### 7.2 Standard Output Sections
 
 #### Target
 
@@ -822,20 +991,26 @@ Only **one primary source** is selected. If the original parent has exited and n
 
 #### Warnings
 
-Non‑blocking observations such as:
+Non‑blocking observations:
 
-- Process is running as root
-- Dangerous Linux capabilities on non-root processes (CAP_SYS_ADMIN, etc.)
+- Process is a zombie (defunct) or stopped (T state)
+- Process is using high CPU (>2h total) or high memory (>1GB RSS)
 - Process is listening on a public interface (0.0.0.0 / ::)
-- Restarted multiple times (warning only if above threshold)
-- Process is using high memory (>1GB RSS)
+- Process is running as root
+- Dangerous Linux capabilities on a non-root process (CAP_SYS_ADMIN, CAP_SYS_PTRACE, etc.)
+- Service or container has restarted more than 5 times
+- No known supervisor or service manager detected
+- Original parent process has exited, so what started the process can't be traced (shown instead of the one above)
 - Process has been running for over 90 days
-- Deleted binary, library injection indicators (LD_PRELOAD, DYLD_*)
-- Original parent process has exited, so what started the process can't be traced
+- Process is running from a suspicious working directory (`/`, `/tmp` or `/var/tmp`)
+- Container has no healthcheck configured
+- Service name and process name do not match
+- Process is running from a deleted binary
+- Library injection indicators (`LD_PRELOAD`, `DYLD_*`)
 
 ---
 
-### 7.4 JSON Output
+### 7.3 JSON Output
 
 `--json` is meant for scripts and tools, and its output is a contract:
 
@@ -857,45 +1032,14 @@ Non‑blocking observations such as:
 
 A test pins every field of every shape, so an accidental rename fails the build.
 
-### 7.5 Using witr with AI Coding Agents
-
-AI coding agents (Claude Code, Codex, Cursor and others) regularly run into ports that are already in use, leftover dev servers and confusing containers, and work around them by chaining `lsof`, `ps`, `netstat` and `docker ps`. witr answers the same questions in one command, and two things make it easy for an agent to use:
-
-- **`--json`** prints the result as JSON: for a process, the full report (the process, its ancestry chain, the source that started it and any warnings). A failed or ambiguous lookup prints `{Target, Error}`, with the candidates in `Matches` when it is ambiguous, and several targets print an array.
-- **Exit codes** say what happened without parsing any text (see [7.2 Exit Codes](#72-exit-codes)). Exit code `1` means the process was found and has warnings; it is not a failure.
-
-Add a short note like this to your project's agent instructions (`AGENTS.md`, `CLAUDE.md` or similar):
-
-```markdown
-## Process and port debugging
-
-Use `witr` instead of chaining lsof/ps/netstat/docker commands:
-
-- Port already in use: `witr --port <PORT> --json`
-- Unknown or stuck process: `witr <name> --json`, or `witr --pid <PID> --tree`
-- Container: `witr --container <name or ID> --json`
-
-Exit codes: 0 found, 1 found with warnings (not a failure), 2 not found,
-3 permission denied (retry with sudo), 4 ambiguous name or bad input
-(re-run with --pid), 5 internal error, 6 found but what started it can't
-be traced. Run `witr --help` for all options.
-```
-
-#### Official agent skill
-
-For fuller guidance, install the official skill: it tells an agent which command fits the situation, how to read the JSON and exit codes, and to ask before stopping anything witr finds. The `witr` binary still needs to be installed.
-
-- **Claude Code:** run `/plugin marketplace add pranshuparmar/witr`, then `/plugin install witr@witr`.
-- **Other agents that read Agent Skills, or a manual install:** copy [`plugins/witr/skills/witr`](plugins/witr/skills/witr) into the agent's skills folder (for Claude Code, `~/.claude/skills/`).
-
 ---
 
 ## 8. Platform Support
 
 - **Linux** (x86_64, arm64, loong64) - Full feature support (`/proc`).
-- **macOS** (x86_64, arm64) - Uses `ps`, `lsof`, `sysctl`, `pgrep`.
+- **macOS** (x86_64, arm64) - Uses `ps`, `lsof`, `netstat`, `sysctl`, `launchctl`.
 - **Windows** (x86_64, arm64) - Native Win32 APIs (ToolHelp32, PSAPI, Service Control Manager). No PowerShell or WMI dependency.
-- **FreeBSD** (x86_64, arm64) - Uses `procstat`, `ps`, `lsof`.
+- **FreeBSD** (x86_64, arm64) - Uses `procstat`, `ps`, `sockstat`, `fstat`.
 
 ---
 
@@ -920,7 +1064,7 @@ For fuller guidance, install the official skill: it tells an agent which command
 | Connections (remote end) | ✅ | ✅ | ✅ | ✅ | Connections show their remote end; connections a listener accepted are counted on its row. |
 | Bind addresses | ✅ | ✅ | ✅ | ✅ | |
 | Port → PID resolution | ✅ | ✅ | ✅ | ✅ | |
-| Port → Container fallback | ✅ | ✅ | ✅ | ✅ | Used when the port is owned by PID 1 via systemd socket activation or a container runtime. A port published by Docker's `docker-proxy`, Docker Desktop's forwarders (`com.docker.backend`, plus `wslrelay` on Windows), rootless Podman's `rootlessport` or `pasta`, or RootlessKit (rootless nerdctl and Docker), is explained by the container's own process when it is visible, and by this view otherwise. So is a port that no process holds but a Docker, Podman or nerdctl container publishes (published through firewall rules). In the TUI's Ports tab, opening such a port's owner shows the container. |
+| Port → Container fallback | ✅ | ✅ | ✅ | ✅ | A port held by PID 1 (socket activation), a port forwarder (`docker-proxy`, Docker Desktop, `rootlessport`, `pasta`, RootlessKit) or no process at all is traced to the service or container behind it, in the CLI and the TUI's Ports tab. |
 | **Service Detection** |
 | Service Manager | ✅ | ✅ | ✅ | ✅ | Linux: systemd, macOS: launchd, Windows: Services, FreeBSD: rc.d |
 | Service Description | ✅ | ✅ | ✅ | ✅ | Linux: `Description`, macOS: `Comment`, Windows: `Display Name`, FreeBSD: `rc` header |
@@ -972,7 +1116,7 @@ Without root, a port held by another user's process still shows which user it be
 
 #### macOS
 
-On macOS, witr uses `ps`, `lsof`, and `launchctl` to gather process information. Some operations may require elevated permissions:
+Some operations may require elevated permissions:
 
 ```bash
 sudo witr [your arguments]
@@ -982,7 +1126,7 @@ Note: Due to macOS System Integrity Protection (SIP), some system process detail
 
 #### Windows
 
-On Windows, witr talks directly to Win32 APIs (ToolHelp32, PSAPI, Service Control Manager) rather than spawning PowerShell or WMI, startup is fast and there's no `Get-CimInstance` hang. To see details for processes owned by other users or system services, you must run the terminal as **Administrator**.
+On Windows, witr talks directly to Win32 APIs (ToolHelp32, PSAPI, Service Control Manager) rather than spawning PowerShell or WMI, so startup is fast and there's no `Get-CimInstance` hang. To see details for processes owned by other users or system services, you must run the terminal as **Administrator**.
 
 ```powershell
 # Run in Administrator PowerShell
@@ -991,18 +1135,7 @@ On Windows, witr talks directly to Win32 APIs (ToolHelp32, PSAPI, Service Contro
 
 ---
 
-## 9. Success Criteria
-
-witr is successful if:
-
-- A user can answer "why is this running?" within seconds
-- It reduces reliance on multiple tools
-- Output is understandable under stress
-- Users trust it during incidents
-
----
-
-## 10. Sponsors
+## 9. Sponsors
 
 Special thanks to the people who supported **witr** ❤️
 

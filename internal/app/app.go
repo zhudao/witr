@@ -30,7 +30,7 @@ var (
 var rootCmd = &cobra.Command{
 	Use:   "witr [process name...]",
 	Short: "Why is this running?",
-	Long:  "witr explains why a process or port is running by tracing its ancestry.",
+	Long:  "witr explains why a process is running, found by name, PID, port, container or open file, by tracing what started it and what keeps it running.",
 	Args:  cobra.ArbitraryArgs,
 	CompletionOptions: cobra.CompletionOptions{
 		HiddenDefaultCmd:  false,
@@ -45,7 +45,7 @@ func _genExamples() string {
 
 	return `
   # Inspect a running process by name
-  witr nginx
+  witr redis-server
 
   # Look up a process by PID
   witr --pid 1234
@@ -63,36 +63,36 @@ func _genExamples() string {
   witr bun --exact
 
   # Show the full process ancestry (who started whom)
-  witr postgres --tree
+  witr mysqld --tree
 
-  # Show only warnings (suspicious env, arguments, parents)
-  witr docker --warnings
+  # Show only warnings (running as root, public bind, restarts, ...)
+  witr dockerd --warnings
 
   # Display only environment variables of the process
-  witr node --env
+  witr --pid 1234 --env
 
   # Short, single-line output (useful for scripts)
-  witr sshd --short
+  witr --port 22 --short
 
   # Disable colorized output (CI or piping)
-  witr redis --no-color
+  witr --port 5432 --no-color
 
   # Output machine-readable JSON
-  witr chrome --json
+  witr --port 3000 --json
 
   # Show extended process information (memory, I/O, file descriptors)
-  witr mysql --verbose
+  witr mysqld --verbose
 
   # Combine flags: inspect port, show environment variables, output JSON
   witr --port 8080 --env --json
 
   # Multiple inputs
-  witr nginx node
+  witr mysqld redis-server
   witr --port 8080 --port 3000
   witr --pid 1234 --pid 5678
 
   # Mixed inputs
-  witr nginx --pid 1234 --port 8080
+  witr redis-server --pid 1234 --port 8080
 `
 }
 
